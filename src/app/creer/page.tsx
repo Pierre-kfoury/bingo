@@ -200,8 +200,8 @@ function CreateBingoContent() {
       setCurrentBingo(updatedBingo as Bingo);
       setIsEditMode(true);
 
-      // Update URL to include the bingo ID (so user can bookmark/share)
-      router.replace(`/creer?id=${tempBingoId}`);
+      // Redirect to the Hub page for the newly created bingo
+      router.push(`/jeu/${tempBingoId}`);
     } catch (error) {
       console.error("Error generating grids:", error);
       throw error;
