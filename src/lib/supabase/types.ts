@@ -1,18 +1,18 @@
 // Database types for Supabase
 
-export type BingoTheme = "standard" | "christmas" | "birthday";
+export type JeuTheme = "standard" | "christmas" | "birthday";
 
-export type Bingo = {
+export type Jeu = {
   id: string;
   name: string;
-  theme: BingoTheme;
+  theme: JeuTheme;
   grid_size: number;
   player_count: number;
   grids_per_page: number;
   created_at: string;
 };
 
-export type BingoImage = {
+export type JeuImage = {
   id: string;
   bingo_id: string;
   name: string;
@@ -20,7 +20,7 @@ export type BingoImage = {
   created_at: string;
 };
 
-export type GridGroup = {
+export type GroupeCartes = {
   id: string;
   bingo_id: string;
   name: string;
@@ -28,7 +28,7 @@ export type GridGroup = {
   created_at: string;
 };
 
-export type Grid = {
+export type Carte = {
   id: string;
   grid_group_id: string;
   name: string;
@@ -36,7 +36,7 @@ export type Grid = {
   created_at: string;
 };
 
-export type DrawSession = {
+export type SessionTirage = {
   id: string;
   bingo_id: string;
   name: string;
@@ -45,23 +45,34 @@ export type DrawSession = {
   created_at: string;
 };
 
-// Grid with its group info (for display)
-export type GridWithGroup = Grid & {
-  grid_group: GridGroup;
+// Carte with its group info (for display)
+export type CarteWithGroup = Carte & {
+  grid_group: GroupeCartes;
 };
 
-// Bingo with counts (for listing)
-export type BingoWithCounts = Bingo & {
+// Jeu with counts (for listing)
+export type JeuWithCounts = Jeu & {
   image_count: number;
   grid_count: number;
   session_count: number;
 };
 
-// Create bingo input (for stepper)
-export type CreateBingoInput = {
+// Create jeu input (for stepper)
+export type CreateJeuInput = {
   name: string;
-  theme: BingoTheme;
+  theme: JeuTheme;
   grid_size: number;
   player_count: number;
   grids_per_page: number;
 };
+
+// Legacy type aliases for gradual migration
+export type BingoTheme = JeuTheme;
+export type Bingo = Jeu;
+export type BingoImage = JeuImage;
+export type GridGroup = GroupeCartes;
+export type Grid = Carte;
+export type DrawSession = SessionTirage;
+export type GridWithGroup = CarteWithGroup;
+export type BingoWithCounts = JeuWithCounts;
+export type CreateBingoInput = CreateJeuInput;

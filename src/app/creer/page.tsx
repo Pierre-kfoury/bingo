@@ -7,7 +7,7 @@ import { StepUpload } from "@/components/create/StepUpload";
 import { StepRecap } from "@/components/create/StepRecap";
 import { LivePreview } from "@/components/create/LivePreview";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { bingoService } from "@/lib/supabase/bingo";
+import { jeuService } from "@/lib/supabase/jeu";
 import { imagesService } from "@/lib/supabase/images";
 import { gridGroupService, gridService } from "@/lib/supabase/cartes";
 import { useBingo } from "@/lib/supabase/context";
@@ -73,7 +73,7 @@ function CreateBingoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
-  const { setCurrentBingo, refreshBingos } = useBingo();
+  const { setCurrentJeu, refreshJeux } = useBingo();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [tempBingoId, setTempBingoId] = useState<string | null>(null);
@@ -96,7 +96,7 @@ function CreateBingoContent() {
     const loadExistingBingo = async () => {
       if (editId) {
         try {
-          const bingo = await bingoService.getById(editId);
+          const bingo = await jeuService.getById(editId);
           if (bingo) {
             setFormData({
               name: bingo.name,
@@ -128,7 +128,7 @@ function CreateBingoContent() {
       if (currentStep === 2 && !tempBingoId && !isEditMode) {
         try {
           const defaultName = formData.name || `Bingo ${new Date().toLocaleDateString('fr-FR')}`;
-          const tempBingo = await bingoService.create({
+          const tempBingo = await jeuService.create({
             ...formData,
             name: defaultName,
           });
@@ -168,7 +168,7 @@ function CreateBingoContent() {
       const finalName = formData.name || `Bingo ${new Date().toLocaleDateString('fr-FR')}`;
       
       // Update bingo with form data
-      const updatedBingo = await bingoService.update(tempBingoId, {
+      const updatedBingo = await jeuService.update(tempBingoId, {
         ...formData,
         name: finalName,
       });
@@ -197,7 +197,7 @@ function CreateBingoContent() {
 
       await gridService.createMany(gridGroup.id, gridsToCreate);
 
-      setCurrentBingo(updatedBingo as Bingo);
+      setCurrentJeu(updatedBingo as Bingo);
       setIsEditMode(true);
 
       // Redirect to the Hub page for the newly created bingo
@@ -213,9 +213,9 @@ function CreateBingoContent() {
 
     setIsDeleting(true);
     try {
-      await bingoService.delete(tempBingoId);
-      await refreshBingos();
-      setCurrentBingo(null);
+      await jeuService.delete(tempBingoId);
+      await refreshJeux();
+      setCurrentJeu(null);
       router.push("/");
     } catch (error) {
       console.error("Error deleting bingo:", error);

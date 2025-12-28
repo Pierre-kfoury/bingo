@@ -83,6 +83,21 @@ export default function CartePrintPage({ params }: PageProps) {
 
   const centerIndex = getCenterIndex(carte.grid_group.size);
 
+  /**
+   * NOTE: This page uses custom grid rendering instead of CarteGrid component.
+   *
+   * Justification:
+   * - CarteGrid is designed for interactive gameplay (with click handlers, marked states, hover effects)
+   * - Print pages require static, non-interactive rendering optimized for paper/PDF output
+   * - Print-specific requirements include:
+   *   - Plain <img> tags instead of Next.js <Image> for better print compatibility
+   *   - White backgrounds and black borders instead of dark theme
+   *   - Precise print layout control (@page CSS, A4 sizing, 190mm width)
+   * - Consistent pattern: All print pages (grilles/[id], cartes/print) use custom rendering
+   *
+   * This approach ensures optimal print quality and maintains consistency across print pages.
+   */
+
   return (
     <>
       {/* Screen view */}

@@ -73,9 +73,9 @@ export default function HomePage() {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {bingos.map((bingo) => {
-                const ThemeIcon = THEME_ICONS[bingo.theme] || Grid3X3;
-                const themeColors = THEME_COLORS[bingo.theme] || THEME_COLORS.standard;
+              {jeux.map((jeu) => {
+                const ThemeIcon = THEME_ICONS[jeu.theme] || Grid3X3;
+                const themeColors = THEME_COLORS[jeu.theme] || THEME_COLORS.standard;
 
                 return (
                   <Card
