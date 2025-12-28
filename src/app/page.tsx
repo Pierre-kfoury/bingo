@@ -109,7 +109,7 @@ export default function HomePage() {
                       {/* Stats */}
                       <div className="flex gap-2">
                         <Badge variant="secondary" className="text-xs">
-                          {jeu.grid_size}×{jeu.grid_size}
+                          Cartes {jeu.grid_size}×{jeu.grid_size}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
                           {jeu.player_count} joueurs
