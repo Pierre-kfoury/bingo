@@ -9,7 +9,7 @@ import { LivePreview } from "@/components/create/LivePreview";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { bingoService } from "@/lib/supabase/bingo";
 import { imagesService } from "@/lib/supabase/images";
-import { gridGroupService, gridService } from "@/lib/supabase/grids";
+import { gridGroupService, gridService } from "@/lib/supabase/cartes";
 import { useBingo } from "@/lib/supabase/context";
 import { cn } from "@/lib/utils";
 import { Check, Trash2 } from "lucide-react";
