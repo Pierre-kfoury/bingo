@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentBingo } = useBingo();
+  const { currentJeu } = useBingo();
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true;
@@ -27,32 +27,32 @@ export function Navigation() {
     {
       label: "Créer",
       icon: Plus,
-      href: "/create",
+      href: "/creer",
       show: true,
     },
     {
       label: "Grilles",
       icon: Grid3X3,
       href: "/grilles",
-      show: !!currentBingo,
+      show: !!currentJeu,
     },
     {
       label: "Images",
       icon: Images,
       href: "/images",
-      show: !!currentBingo,
+      show: !!currentJeu,
     },
     {
       label: "Tirage",
       icon: Play,
       href: "/tirage",
-      show: !!currentBingo,
+      show: !!currentJeu,
     },
     {
       label: "Imprimer",
       icon: Printer,
       href: "/grilles/print",
-      show: !!currentBingo,
+      show: !!currentJeu,
     },
   ];
 
@@ -103,17 +103,17 @@ export function Navigation() {
       </div>
 
       {/* Current Bingo indicator */}
-      {currentBingo && pathname !== "/" && (
+      {currentJeu && pathname !== "/" && (
         <div className="border-t border-border bg-secondary/30">
           <div className="max-w-7xl mx-auto px-4 py-2">
             <p className="text-xs text-muted-foreground">
               Bingo actuel :{" "}
               <span className="font-semibold text-foreground">
-                {currentBingo.name}
+                {currentJeu.name}
               </span>{" "}
               <span className="text-muted-foreground">
-                ({currentBingo.grid_size}×{currentBingo.grid_size} •{" "}
-                {currentBingo.player_count} pages)
+                ({currentJeu.grid_size}×{currentJeu.grid_size} •{" "}
+                {currentJeu.player_count} pages)
               </span>
             </p>
           </div>

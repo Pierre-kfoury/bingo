@@ -29,7 +29,7 @@ const THEME_COLORS: Record<BingoTheme, string> = {
 
 export default function HomePage() {
   const router = useRouter();
-  const { setCurrentBingo, bingos, isLoading } = useBingo();
+  const { setCurrentJeu, jeux, isLoading } = useBingo();
 
   if (isLoading) {
     return (
@@ -57,7 +57,7 @@ export default function HomePage() {
         <div className="flex justify-center mb-12">
           <Button
             size="lg"
-            onClick={() => router.push("/create")}
+            onClick={() => router.push("/creer")}
             className="h-14 px-8 text-lg font-bold rounded-2xl gradient-primary hover:opacity-90 transition-all transform hover:scale-105 shadow-xl shadow-primary/25"
           >
             <Plus className="w-5 h-5 mr-2" />
@@ -66,7 +66,7 @@ export default function HomePage() {
         </div>
 
         {/* Recent Bingos */}
-        {bingos.length > 0 && (
+        {jeux.length > 0 && (
           <div>
             <h2 className="text-xl font-semibold mb-4 text-center text-muted-foreground">
               Ou continuez avec un bingo existant
@@ -82,8 +82,8 @@ export default function HomePage() {
                     key={bingo.id}
                     className="group cursor-pointer hover:border-primary/50 transition-all duration-300"
                     onClick={() => {
-                      setCurrentBingo(bingo);
-                      router.push(`/create?id=${bingo.id}`);
+                      setCurrentJeu(bingo);
+                      router.push(`/creer?id=${bingo.id}`);
                     }}
                   >
                     <CardContent className="p-5 relative">

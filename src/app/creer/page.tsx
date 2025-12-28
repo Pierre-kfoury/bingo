@@ -199,9 +199,9 @@ function CreateBingoContent() {
 
       setCurrentBingo(updatedBingo as Bingo);
       setIsEditMode(true);
-      
+
       // Update URL to include the bingo ID (so user can bookmark/share)
-      router.replace(`/create?id=${tempBingoId}`);
+      router.replace(`/creer?id=${tempBingoId}`);
     } catch (error) {
       console.error("Error generating grids:", error);
       throw error;

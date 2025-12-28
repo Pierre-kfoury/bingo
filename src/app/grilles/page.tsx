@@ -36,7 +36,7 @@ function getCenterIndex(size: number): number | null {
 
 export default function GrillesPage() {
   const router = useRouter();
-  const { currentBingo, isLoading: bingoLoading } = useBingo();
+  const { currentJeu, isLoading: bingoLoading } = useBingo();
   const [gridGroups, setGridGroups] = useState<GridGroup[]>([]);
   const [grids, setGrids] = useState<GridWithGroup[]>([]);
   const [images, setImages] = useState<Map<string, BingoImage>>(new Map());
@@ -44,7 +44,7 @@ export default function GrillesPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ type: "group" | "grid"; id: string } | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!currentBingo) {
+    if (!currentJeu) {
       setGridGroups([]);
       setGrids([]);
       setImages(new Map());
@@ -54,9 +54,9 @@ export default function GrillesPage() {
 
     try {
       const [groupsData, gridsData, imagesData] = await Promise.all([
-        gridGroupService.getAll(currentBingo.id),
-        gridService.getAllForBingo(currentBingo.id),
-        imagesService.getAll(currentBingo.id),
+        gridGroupService.getAll(currentJeu.id),
+        gridService.getAllForBingo(currentJeu.id),
+        imagesService.getAll(currentJeu.id),
       ]);
 
       setGridGroups(groupsData);
@@ -67,7 +67,7 @@ export default function GrillesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentBingo]);
+  }, [currentJeu]);
 
   useEffect(() => {
     if (!bingoLoading) {
@@ -145,7 +145,7 @@ export default function GrillesPage() {
     gridsByGroup.get(groupId)!.push(grid);
   });
 
-  if (bingoLoading || !currentBingo) {
+  if (bingoLoading || !currentJeu) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20">
         <div className="flex flex-col items-center justify-center">
@@ -171,7 +171,7 @@ export default function GrillesPage() {
     );
   }
 
-  const ThemeIcon = THEME_ICONS[currentBingo.theme] || Grid3X3;
+  const ThemeIcon = THEME_ICONS[currentJeu.theme] || Grid3X3;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -183,9 +183,9 @@ export default function GrillesPage() {
               <ThemeIcon className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">{currentBingo.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{currentJeu.name}</h1>
               <p className="text-muted-foreground text-sm">
-                {currentBingo.grid_size}×{currentBingo.grid_size} • {currentBingo.player_count} joueurs
+                {currentJeu.grid_size}×{currentJeu.grid_size} • {currentJeu.player_count} joueurs
               </p>
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function GrillesPage() {
               </Link>
             </Button>
           )}
-          <Button onClick={() => router.push("/create")} className="gradient-primary">
+          <Button onClick={() => router.push("/creer")} className="gradient-primary">
             <Plus className="w-4 h-4 mr-2" />
             Nouveau bingo
           </Button>
@@ -224,7 +224,7 @@ export default function GrillesPage() {
             <p className="text-muted-foreground mt-2 mb-6">
               Les grilles sont générées lors de la création du bingo
             </p>
-            <Button onClick={() => router.push("/create")} className="gradient-primary">
+            <Button onClick={() => router.push("/creer")} className="gradient-primary">
               <Plus className="w-4 h-4 mr-2" />
               Créer un nouveau bingo
             </Button>
