@@ -6,12 +6,13 @@ import { StepParameters } from "@/components/create/StepParameters";
 import { StepUpload } from "@/components/create/StepUpload";
 import { StepRecap } from "@/components/create/StepRecap";
 import { LivePreview } from "@/components/create/LivePreview";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { bingoService } from "@/lib/supabase/bingo";
 import { imagesService } from "@/lib/supabase/images";
 import { gridGroupService, gridService } from "@/lib/supabase/grids";
 import { useBingo } from "@/lib/supabase/context";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import type { BingoImage, CreateBingoInput, Bingo } from "@/lib/supabase/types";
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -72,13 +73,15 @@ function CreateBingoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
-  const { setCurrentBingo } = useBingo();
+  const { setCurrentBingo, refreshBingos } = useBingo();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [tempBingoId, setTempBingoId] = useState<string | null>(null);
   const [images, setImages] = useState<BingoImage[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(!!editId);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formData, setFormData] = useState<CreateBingoInput>({
     name: "",
@@ -205,6 +208,21 @@ function CreateBingoContent() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!tempBingoId) return;
+
+    setIsDeleting(true);
+    try {
+      await bingoService.delete(tempBingoId);
+      await refreshBingos();
+      setCurrentBingo(null);
+      router.push("/");
+    } catch (error) {
+      console.error("Error deleting bingo:", error);
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -220,10 +238,20 @@ function CreateBingoContent() {
     <div className="min-h-screen bg-background">
       <div className="max-w-[1600px] mx-auto px-6 py-6">
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 relative">
           <h1 className="text-2xl md:text-3xl font-bold gradient-text">
             {isEditMode ? `Modifier : ${formData.name || 'Sans nom'}` : "Créer un nouveau bingo"}
           </h1>
+          {isEditMode && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 px-4 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors flex items-center gap-2"
+              aria-label="Supprimer ce bingo"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Supprimer</span>
+            </button>
+          )}
         </div>
 
         {/* Main layout - Left 60% (Stepper + Form), Right 40% (Preview) */}
@@ -329,6 +357,18 @@ function CreateBingoContent() {
           />
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="Supprimer ce bingo ?"
+        message={`Êtes-vous sûr de vouloir supprimer "${formData.name || 'ce bingo'}" ?\n\nToutes les images, grilles et sessions de tirage associées seront également supprimées.\n\nCette action est irréversible.`}
+        confirmText="Supprimer"
+        isDangerous
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

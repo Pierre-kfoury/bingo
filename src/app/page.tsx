@@ -73,7 +73,7 @@ export default function HomePage() {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {bingos.slice(0, 6).map((bingo) => {
+              {bingos.map((bingo) => {
                 const ThemeIcon = THEME_ICONS[bingo.theme] || Grid3X3;
                 const themeColors = THEME_COLORS[bingo.theme] || THEME_COLORS.standard;
 
@@ -123,12 +123,6 @@ export default function HomePage() {
                 );
               })}
             </div>
-
-            {bingos.length > 6 && (
-              <p className="text-center text-sm text-muted-foreground mt-4">
-                +{bingos.length - 6} autres bingos
-              </p>
-            )}
           </div>
         )}
       </div>
