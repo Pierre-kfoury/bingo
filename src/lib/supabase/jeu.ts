@@ -1,49 +1,49 @@
 import { supabase } from "./client";
-import type { Bingo, BingoWithCounts, CreateBingoInput } from "./types";
+import type { Jeu, JeuWithCounts, CreateJeuInput } from "./types";
 
-export const bingoService = {
-  async getAll(): Promise<Bingo[]> {
+export const jeuService = {
+  async getAll(): Promise<Jeu[]> {
     const { data, error } = await supabase
       .from("bingo")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return (data as Bingo[]) || [];
+    return (data as Jeu[]) || [];
   },
 
-  async getAllWithCounts(): Promise<BingoWithCounts[]> {
-    const { data: bingos, error } = await supabase
+  async getAllWithCounts(): Promise<JeuWithCounts[]> {
+    const { data: jeux, error } = await supabase
       .from("bingo")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    if (!bingos) return [];
+    if (!jeux) return [];
 
-    const result: BingoWithCounts[] = [];
+    const result: JeuWithCounts[] = [];
 
-    for (const bingo of bingos as Bingo[]) {
+    for (const jeu of jeux as Jeu[]) {
       const [imageCount, , sessionCount] = await Promise.all([
         supabase
           .from("bingo_image")
           .select("id", { count: "exact", head: true })
-          .eq("bingo_id", bingo.id),
+          .eq("bingo_id", jeu.id),
         supabase
           .from("grid_group")
           .select("id", { count: "exact", head: true })
-          .eq("bingo_id", bingo.id),
+          .eq("bingo_id", jeu.id),
         supabase
           .from("draw_session")
           .select("id", { count: "exact", head: true })
-          .eq("bingo_id", bingo.id),
+          .eq("bingo_id", jeu.id),
       ]);
 
       // Get total grid count from all grid groups
       const { data: gridGroups } = await supabase
         .from("grid_group")
         .select("id")
-        .eq("bingo_id", bingo.id);
+        .eq("bingo_id", jeu.id);
 
       let gridCount = 0;
       if (gridGroups && gridGroups.length > 0) {
@@ -58,7 +58,7 @@ export const bingoService = {
       }
 
       result.push({
-        ...bingo,
+        ...jeu,
         image_count: imageCount.count || 0,
         grid_count: gridCount,
         session_count: sessionCount.count || 0,
@@ -68,7 +68,7 @@ export const bingoService = {
     return result;
   },
 
-  async getById(id: string): Promise<Bingo | null> {
+  async getById(id: string): Promise<Jeu | null> {
     const { data, error } = await supabase
       .from("bingo")
       .select("*")
@@ -79,10 +79,10 @@ export const bingoService = {
       if (error.code === "PGRST116") return null;
       throw error;
     }
-    return data as Bingo;
+    return data as Jeu;
   },
 
-  async create(input: CreateBingoInput): Promise<Bingo> {
+  async create(input: CreateJeuInput): Promise<Jeu> {
     const { data, error } = await supabase
       .from("bingo")
       .insert({
@@ -96,13 +96,13 @@ export const bingoService = {
       .single();
 
     if (error) throw error;
-    return data as Bingo;
+    return data as Jeu;
   },
 
   async update(
     id: string,
-    input: Partial<CreateBingoInput>
-  ): Promise<Bingo> {
+    input: Partial<CreateJeuInput>
+  ): Promise<Jeu> {
     const { data, error } = await supabase
       .from("bingo")
       .update(input)
@@ -111,7 +111,7 @@ export const bingoService = {
       .single();
 
     if (error) throw error;
-    return data as Bingo;
+    return data as Jeu;
   },
 
   async delete(id: string): Promise<void> {
@@ -120,3 +120,6 @@ export const bingoService = {
     if (error) throw error;
   },
 };
+
+// Legacy export for gradual migration
+export const bingoService = jeuService;

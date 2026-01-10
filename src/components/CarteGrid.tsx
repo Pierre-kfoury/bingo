@@ -8,7 +8,7 @@ type ImageData = {
   url: string;
 };
 
-type BingoGridProps = {
+type CarteGridProps = {
   cells: number[];
   images: Map<number, ImageData> | Record<number, ImageData>;
   markedCells?: Set<number>;
@@ -16,13 +16,13 @@ type BingoGridProps = {
   size?: "sm" | "md" | "lg";
 };
 
-export function BingoGrid({
+export function CarteGrid({
   cells,
   images,
   markedCells = new Set(),
   onCellClick,
   size = "md",
-}: BingoGridProps) {
+}: CarteGridProps) {
   const sizeClasses = {
     sm: "w-12 h-12 md:w-16 md:h-16",
     md: "w-16 h-16 md:w-20 md:h-20",
