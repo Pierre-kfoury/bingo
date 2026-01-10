@@ -3,10 +3,10 @@
 import { useState, useEffect, use, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useBingo } from "@/lib/supabase/context";
+import { useJeu } from "@/lib/supabase/context";
 import { imagesService } from "@/lib/supabase/images";
-import { gridService } from "@/lib/supabase/grids";
-import type { BingoImage, GridWithGroup } from "@/lib/supabase/types";
+import { carteService } from "@/lib/supabase/cartes";
+import type { JeuImage, CarteWithGroup } from "@/lib/supabase/types";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -17,30 +17,30 @@ function getCenterIndex(size: number): number | null {
   return Math.floor((size * size) / 2);
 }
 
-export default function GrillePrintPage({ params }: PageProps) {
+export default function CartePrintPage({ params }: PageProps) {
   const resolvedParams = use(params);
-  const gridId = resolvedParams.id;
-  const { currentBingo, isLoading: bingoLoading } = useBingo();
+  const carteId = resolvedParams.id;
+  const { currentJeu, isLoading: jeuLoading } = useJeu();
 
-  const [grid, setGrid] = useState<GridWithGroup | null>(null);
-  const [images, setImages] = useState<Map<string, BingoImage>>(new Map());
+  const [carte, setCarte] = useState<CarteWithGroup | null>(null);
+  const [images, setImages] = useState<Map<string, JeuImage>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!currentBingo) {
+      if (!currentJeu) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const [gridData, imagesData] = await Promise.all([
-          gridService.getByIdWithGroup(gridId),
-          imagesService.getAll(currentBingo.id),
+        const [carteData, imagesData] = await Promise.all([
+          carteService.getByIdWithGroup(carteId),
+          imagesService.getAll(currentJeu.id),
         ]);
 
-        setGrid(gridData);
+        setCarte(carteData);
         setImages(new Map(imagesData.map((img) => [img.id, img])));
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -49,16 +49,16 @@ export default function GrillePrintPage({ params }: PageProps) {
       }
     };
 
-    if (!bingoLoading) {
+    if (!jeuLoading) {
       fetchData();
     }
-  }, [gridId, currentBingo, bingoLoading]);
+  }, [carteId, currentJeu, jeuLoading]);
 
   const handlePrint = () => {
     window.print();
   };
 
-  if (isLoading || bingoLoading) {
+  if (isLoading || jeuLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
@@ -66,22 +66,37 @@ export default function GrillePrintPage({ params }: PageProps) {
     );
   }
 
-  if (!grid) {
+  if (!carte) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
         <span className="text-6xl mb-4 block">❌</span>
-        <p className="text-xl text-gray-400">Grille introuvable</p>
+        <p className="text-xl text-gray-400">Carte introuvable</p>
         <Link
-          href="/grilles"
+          href="/"
           className="inline-block mt-4 px-6 py-3 bg-purple-600 rounded-xl"
         >
-          Retour aux grilles
+          Retour au Hub
         </Link>
       </div>
     );
   }
 
-  const centerIndex = getCenterIndex(grid.grid_group.size);
+  const centerIndex = getCenterIndex(carte.grid_group.size);
+
+  /**
+   * NOTE: This page uses custom grid rendering instead of CarteGrid component.
+   *
+   * Justification:
+   * - CarteGrid is designed for interactive gameplay (with click handlers, marked states, hover effects)
+   * - Print pages require static, non-interactive rendering optimized for paper/PDF output
+   * - Print-specific requirements include:
+   *   - Plain <img> tags instead of Next.js <Image> for better print compatibility
+   *   - White backgrounds and black borders instead of dark theme
+   *   - Precise print layout control (@page CSS, A4 sizing, 190mm width)
+   * - Consistent pattern: All print pages (grilles/[id], cartes/print) use custom rendering
+   *
+   * This approach ensures optimal print quality and maintains consistency across print pages.
+   */
 
   return (
     <>
@@ -90,16 +105,16 @@ export default function GrillePrintPage({ params }: PageProps) {
         <div className="flex items-center justify-between mb-6">
           <div>
             <Link
-              href="/grilles"
+              href="/"
               className="text-gray-400 hover:text-white transition-colors text-sm mb-2 inline-block"
             >
-              ← Retour aux grilles
+              ← Retour au Hub
             </Link>
             <h1 className="text-2xl md:text-3xl font-bold text-white">
-              🖨️ {grid.name}
+              🖨️ {carte.name}
             </h1>
             <p className="text-gray-400 text-sm">
-              {grid.grid_group.name} • {grid.grid_group.size}×{grid.grid_group.size}
+              {carte.grid_group.name} • {carte.grid_group.size}×{carte.grid_group.size}
             </p>
           </div>
           <button
@@ -111,27 +126,27 @@ export default function GrillePrintPage({ params }: PageProps) {
         </div>
 
         <p className="text-gray-400 mb-6">
-          Aperçu de la grille. Cliquez sur &quot;Imprimer&quot; pour l&apos;imprimer ou la sauvegarder en PDF.
+          Aperçu de la carte. Cliquez sur &quot;Imprimer&quot; pour l&apos;imprimer ou la sauvegarder en PDF.
         </p>
 
         {/* Preview */}
         <div className="bg-white rounded-2xl p-8 flex justify-center">
           <div className="w-full max-w-md">
             <div className="text-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">{grid.name}</h2>
+              <h2 className="text-xl font-bold text-gray-800">{carte.name}</h2>
               <p className="text-sm text-gray-500">
-                {grid.grid_group.name} • {grid.grid_group.size}×{grid.grid_group.size}
+                {carte.grid_group.name} • {carte.grid_group.size}×{carte.grid_group.size}
               </p>
             </div>
             <div
               className="border-2 border-gray-800"
               style={{
                 display: "grid",
-                gridTemplateColumns: `repeat(${grid.grid_group.size}, 1fr)`,
+                gridTemplateColumns: `repeat(${carte.grid_group.size}, 1fr)`,
                 gap: "1px",
               }}
             >
-              {grid.cells.map((imageId, index) => {
+              {carte.cells.map((imageId, index) => {
                 const isCenter = index === centerIndex;
                 const isStar = imageId === "star";
                 const image = !isStar ? images.get(imageId) : null;
@@ -147,8 +162,9 @@ export default function GrillePrintPage({ params }: PageProps) {
                       <Image
                         src={image.url}
                         alt={image.name}
-                        width={100}
-                        height={100}
+                        width={300}
+                        height={300}
+                        quality={95}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -173,6 +189,16 @@ export default function GrillePrintPage({ params }: PageProps) {
             body {
               background: white !important;
               color: black !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            img {
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+              max-width: 100%;
+              height: auto;
             }
             .print\\:block {
               display: block !important;
@@ -182,11 +208,11 @@ export default function GrillePrintPage({ params }: PageProps) {
             }
           }
         `}</style>
-        
+
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-black">{grid.name}</h1>
+          <h1 className="text-2xl font-bold text-black">{carte.name}</h1>
           <p className="text-sm text-gray-600">
-            {grid.grid_group.name} • {grid.grid_group.size}×{grid.grid_group.size}
+            {carte.grid_group.name} • {carte.grid_group.size}×{carte.grid_group.size}
           </p>
         </div>
 
@@ -196,10 +222,10 @@ export default function GrillePrintPage({ params }: PageProps) {
               className="border-2 border-black"
               style={{
                 display: "grid",
-                gridTemplateColumns: `repeat(${grid.grid_group.size}, 1fr)`,
+                gridTemplateColumns: `repeat(${carte.grid_group.size}, 1fr)`,
               }}
             >
-              {grid.cells.map((imageId, index) => {
+              {carte.cells.map((imageId, index) => {
                 const isCenter = index === centerIndex;
                 const isStar = imageId === "star";
                 const image = !isStar ? images.get(imageId) : null;
@@ -216,6 +242,10 @@ export default function GrillePrintPage({ params }: PageProps) {
                         src={image.url}
                         alt={image.name}
                         className="w-full h-full object-cover"
+                        style={{
+                          imageRendering: "crisp-edges",
+                        }}
+                        loading="eager"
                       />
                     ) : (
                       <span className="text-gray-400">?</span>

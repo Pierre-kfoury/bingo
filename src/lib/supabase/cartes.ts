@@ -1,19 +1,19 @@
 import { supabase } from "./client";
-import type { Grid, GridGroup, GridWithGroup } from "./types";
+import type { Carte, GroupeCartes, CarteWithGroup } from "./types";
 
-export const gridGroupService = {
-  async getAll(bingoId: string): Promise<GridGroup[]> {
+export const groupeCartesService = {
+  async getAll(jeuId: string): Promise<GroupeCartes[]> {
     const { data, error } = await supabase
       .from("grid_group")
       .select("*")
-      .eq("bingo_id", bingoId)
+      .eq("bingo_id", jeuId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return (data as GridGroup[]) || [];
+    return (data as GroupeCartes[]) || [];
   },
 
-  async getById(id: string): Promise<GridGroup | null> {
+  async getById(id: string): Promise<GroupeCartes | null> {
     const { data, error } = await supabase
       .from("grid_group")
       .select("*")
@@ -24,18 +24,18 @@ export const gridGroupService = {
       if (error.code === "PGRST116") return null;
       throw error;
     }
-    return data as GridGroup;
+    return data as GroupeCartes;
   },
 
-  async create(bingoId: string, name: string, size: number): Promise<GridGroup> {
+  async create(jeuId: string, name: string, size: number): Promise<GroupeCartes> {
     const { data, error } = await supabase
       .from("grid_group")
-      .insert({ bingo_id: bingoId, name, size })
+      .insert({ bingo_id: jeuId, name, size })
       .select()
       .single();
 
     if (error) throw error;
-    return data as GridGroup;
+    return data as GroupeCartes;
   },
 
   async delete(id: string): Promise<void> {
@@ -44,26 +44,26 @@ export const gridGroupService = {
     if (error) throw error;
   },
 
-  async deleteAll(bingoId: string): Promise<number> {
-    const groups = await this.getAll(bingoId);
+  async deleteAll(jeuId: string): Promise<number> {
+    const groups = await this.getAll(jeuId);
     const count = groups.length;
 
     const { error } = await supabase
       .from("grid_group")
       .delete()
-      .eq("bingo_id", bingoId);
+      .eq("bingo_id", jeuId);
 
     if (error) throw error;
     return count;
   },
 };
 
-export const gridService = {
-  async getAll(gridGroupId: string): Promise<Grid[]> {
+export const carteService = {
+  async getAll(groupeCartesId: string): Promise<Carte[]> {
     const { data, error } = await supabase
       .from("grid")
       .select("*")
-      .eq("grid_group_id", gridGroupId)
+      .eq("grid_group_id", groupeCartesId)
       .order("created_at", { ascending: true });
 
     if (error) throw error;
@@ -76,20 +76,20 @@ export const gridService = {
     );
   },
 
-  async getAllForBingo(bingoId: string): Promise<GridWithGroup[]> {
-    // First get all grid groups for this bingo
+  async getAllForJeu(jeuId: string): Promise<CarteWithGroup[]> {
+    // First get all grid groups for this jeu
     const { data: groups, error: groupsError } = await supabase
       .from("grid_group")
       .select("*")
-      .eq("bingo_id", bingoId);
+      .eq("bingo_id", jeuId);
 
     if (groupsError) throw groupsError;
     if (!groups || groups.length === 0) return [];
 
-    const typedGroups = groups as GridGroup[];
+    const typedGroups = groups as GroupeCartes[];
 
     // Then get all grids for these groups
-    const { data: grids, error: gridsError } = await supabase
+    const { data: cartes, error: cartesError } = await supabase
       .from("grid")
       .select("*")
       .in(
@@ -98,21 +98,21 @@ export const gridService = {
       )
       .order("created_at", { ascending: true });
 
-    if (gridsError) throw gridsError;
+    if (cartesError) throw cartesError;
 
     // Map groups by id for quick lookup
     const groupMap = new Map(typedGroups.map((g) => [g.id, g]));
 
     return (
-      (grids as Array<{ id: string; grid_group_id: string; name: string; cells: unknown; created_at: string }>)?.map((grid) => ({
-        ...grid,
-        cells: Array.isArray(grid.cells) ? (grid.cells as string[]) : [],
-        grid_group: groupMap.get(grid.grid_group_id)!,
+      (cartes as Array<{ id: string; grid_group_id: string; name: string; cells: unknown; created_at: string }>)?.map((carte) => ({
+        ...carte,
+        cells: Array.isArray(carte.cells) ? (carte.cells as string[]) : [],
+        grid_group: groupMap.get(carte.grid_group_id)!,
       })) || []
     );
   },
 
-  async getById(id: string): Promise<Grid | null> {
+  async getById(id: string): Promise<Carte | null> {
     const { data, error } = await supabase
       .from("grid")
       .select("*")
@@ -131,7 +131,7 @@ export const gridService = {
     };
   },
 
-  async getByIdWithGroup(id: string): Promise<GridWithGroup | null> {
+  async getByIdWithGroup(id: string): Promise<CarteWithGroup | null> {
     const { data, error } = await supabase
       .from("grid")
       .select("*, grid_group(*)")
@@ -143,7 +143,7 @@ export const gridService = {
       throw error;
     }
 
-    const typedData = data as { id: string; grid_group_id: string; name: string; cells: unknown; created_at: string; grid_group: GridGroup };
+    const typedData = data as { id: string; grid_group_id: string; name: string; cells: unknown; created_at: string; grid_group: GroupeCartes };
     return {
       ...typedData,
       cells: Array.isArray(typedData.cells) ? (typedData.cells as string[]) : [],
@@ -151,10 +151,10 @@ export const gridService = {
     };
   },
 
-  async create(gridGroupId: string, name: string, cells: string[]): Promise<Grid> {
+  async create(groupeCartesId: string, name: string, cells: string[]): Promise<Carte> {
     const { data, error } = await supabase
       .from("grid")
-      .insert({ grid_group_id: gridGroupId, name, cells })
+      .insert({ grid_group_id: groupeCartesId, name, cells })
       .select()
       .single();
 
@@ -168,19 +168,19 @@ export const gridService = {
   },
 
   async createMany(
-    gridGroupId: string,
-    grids: { name: string; cells: string[] }[]
-  ): Promise<Grid[]> {
+    groupeCartesId: string,
+    cartes: { name: string; cells: string[] }[]
+  ): Promise<Carte[]> {
     const { data, error } = await supabase
       .from("grid")
-      .insert(grids.map((g) => ({ grid_group_id: gridGroupId, ...g })))
+      .insert(cartes.map((c) => ({ grid_group_id: groupeCartesId, ...c })))
       .select();
 
     if (error) throw error;
     return (
-      (data as Array<{ id: string; grid_group_id: string; name: string; cells: unknown; created_at: string }>)?.map((g) => ({
-        ...g,
-        cells: Array.isArray(g.cells) ? (g.cells as string[]) : [],
+      (data as Array<{ id: string; grid_group_id: string; name: string; cells: unknown; created_at: string }>)?.map((c) => ({
+        ...c,
+        cells: Array.isArray(c.cells) ? (c.cells as string[]) : [],
       })) || []
     );
   },
@@ -191,11 +191,11 @@ export const gridService = {
     if (error) throw error;
   },
 
-  async countForBingo(bingoId: string): Promise<number> {
+  async countForJeu(jeuId: string): Promise<number> {
     const { data: groups } = await supabase
       .from("grid_group")
       .select("id")
-      .eq("bingo_id", bingoId);
+      .eq("bingo_id", jeuId);
 
     if (!groups || groups.length === 0) return 0;
 
@@ -211,3 +211,7 @@ export const gridService = {
     return count || 0;
   },
 };
+
+// Legacy exports for gradual migration
+export const gridGroupService = groupeCartesService;
+export const gridService = carteService;

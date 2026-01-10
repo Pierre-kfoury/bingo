@@ -7,9 +7,9 @@ import { StepUpload } from "@/components/create/StepUpload";
 import { StepRecap } from "@/components/create/StepRecap";
 import { LivePreview } from "@/components/create/LivePreview";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { bingoService } from "@/lib/supabase/bingo";
+import { jeuService } from "@/lib/supabase/jeu";
 import { imagesService } from "@/lib/supabase/images";
-import { gridGroupService, gridService } from "@/lib/supabase/grids";
+import { gridGroupService, gridService } from "@/lib/supabase/cartes";
 import { useBingo } from "@/lib/supabase/context";
 import { cn } from "@/lib/utils";
 import { Check, Trash2 } from "lucide-react";
@@ -73,7 +73,7 @@ function CreateBingoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
-  const { setCurrentBingo, refreshBingos } = useBingo();
+  const { setCurrentJeu, refreshJeux } = useBingo();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [tempBingoId, setTempBingoId] = useState<string | null>(null);
@@ -96,7 +96,7 @@ function CreateBingoContent() {
     const loadExistingBingo = async () => {
       if (editId) {
         try {
-          const bingo = await bingoService.getById(editId);
+          const bingo = await jeuService.getById(editId);
           if (bingo) {
             setFormData({
               name: bingo.name,
@@ -128,7 +128,7 @@ function CreateBingoContent() {
       if (currentStep === 2 && !tempBingoId && !isEditMode) {
         try {
           const defaultName = formData.name || `Bingo ${new Date().toLocaleDateString('fr-FR')}`;
-          const tempBingo = await bingoService.create({
+          const tempBingo = await jeuService.create({
             ...formData,
             name: defaultName,
           });
@@ -160,15 +160,17 @@ function CreateBingoContent() {
     setImages(newImages);
   };
 
-  const handleConfirm = async () => {
-    if (!tempBingoId) return;
+  const handleConfirm = async (): Promise<string[]> => {
+    if (!tempBingoId) {
+      throw new Error("Bingo ID is required to generate grids");
+    }
 
     try {
       // Use default name if empty
       const finalName = formData.name || `Bingo ${new Date().toLocaleDateString('fr-FR')}`;
       
       // Update bingo with form data
-      const updatedBingo = await bingoService.update(tempBingoId, {
+      const updatedBingo = await jeuService.update(tempBingoId, {
         ...formData,
         name: finalName,
       });
@@ -195,13 +197,20 @@ function CreateBingoContent() {
         });
       }
 
-      await gridService.createMany(gridGroup.id, gridsToCreate);
+      const createdGrids = await gridService.createMany(gridGroup.id, gridsToCreate);
 
-      setCurrentBingo(updatedBingo as Bingo);
+      // Refresh the jeu list and reload the current jeu to ensure theme is up to date
+      await refreshJeux();
+      const reloadedJeu = await jeuService.getById(tempBingoId);
+      if (reloadedJeu) {
+        setCurrentJeu(reloadedJeu as Bingo);
+      } else {
+        setCurrentJeu(updatedBingo as Bingo);
+      }
       setIsEditMode(true);
-      
-      // Update URL to include the bingo ID (so user can bookmark/share)
-      router.replace(`/create?id=${tempBingoId}`);
+
+      // Return the created grid IDs
+      return createdGrids.map(g => g.id);
     } catch (error) {
       console.error("Error generating grids:", error);
       throw error;
@@ -213,9 +222,9 @@ function CreateBingoContent() {
 
     setIsDeleting(true);
     try {
-      await bingoService.delete(tempBingoId);
-      await refreshBingos();
-      setCurrentBingo(null);
+      await jeuService.delete(tempBingoId);
+      await refreshJeux();
+      setCurrentJeu(null);
       router.push("/");
     } catch (error) {
       console.error("Error deleting bingo:", error);
@@ -329,6 +338,7 @@ function CreateBingoContent() {
                   onPrevious={() => setCurrentStep(2)}
                   onConfirm={handleConfirm}
                   isEditMode={isEditMode}
+                  jeuId={tempBingoId || undefined}
                 />
               )}
             </div>

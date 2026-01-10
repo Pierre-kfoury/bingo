@@ -15,6 +15,7 @@ import {
   Play,
   Printer,
   RefreshCw,
+  FileDown,
 } from "lucide-react";
 import type { BingoImage, CreateBingoInput, BingoTheme } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
@@ -24,8 +25,9 @@ type StepRecapProps = {
   images: BingoImage[];
   onChange: (data: Partial<CreateBingoInput>) => void;
   onPrevious: () => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: () => Promise<string[]>;
   isEditMode?: boolean;
+  jeuId?: string;
 };
 
 const THEMES: { value: BingoTheme; label: string; icon: React.ElementType; colors: string }[] = [
@@ -49,10 +51,12 @@ const THEMES: { value: BingoTheme; label: string; icon: React.ElementType; color
   },
 ];
 
-export function StepRecap({ data, images, onChange, onPrevious, onConfirm, isEditMode = false }: StepRecapProps) {
+export function StepRecap({ data, images, onChange, onPrevious, onConfirm, isEditMode = false, jeuId }: StepRecapProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(isEditMode);
+  const [carteIds, setCarteIds] = useState<string[]>([]);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const totalCells = data.grid_size * data.grid_size;
   const hasCenter = data.grid_size % 2 !== 0;
@@ -63,10 +67,52 @@ export function StepRecap({ data, images, onChange, onPrevious, onConfirm, isEdi
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      await onConfirm();
+      const ids = await onConfirm();
+      setCarteIds(ids);
       setHasGenerated(true);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!jeuId || carteIds.length === 0) return;
+
+    setIsGeneratingPDF(true);
+    try {
+      const response = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          carteIds,
+          jeuId,
+          gridsPerPage: data.grids_per_page,
+          theme: data.theme,
+          jeuName: data.name,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      // Download the PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${data.name.replace(/[^a-z0-9]/gi, "_")}_cartes.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Erreur lors de la génération du PDF");
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -176,10 +222,20 @@ export function StepRecap({ data, images, onChange, onPrevious, onConfirm, isEdi
             <Button
               size="lg"
               variant="secondary"
-              onClick={() => router.push("/grilles/print")}
+              onClick={handleDownloadPDF}
+              disabled={carteIds.length === 0 || isGeneratingPDF}
             >
-              <Printer className="w-4 h-4 mr-2" />
-              Imprimer
+              {isGeneratingPDF ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  PDF...
+                </>
+              ) : (
+                <>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Télécharger PDF
+                </>
+              )}
             </Button>
           </div>
 

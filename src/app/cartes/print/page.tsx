@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useBingo } from "@/lib/supabase/context";
 import { imagesService } from "@/lib/supabase/images";
-import { gridService } from "@/lib/supabase/grids";
+import { carteService } from "@/lib/supabase/cartes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
-import type { BingoImage, GridWithGroup, BingoTheme } from "@/lib/supabase/types";
+import type { JeuImage, CarteWithGroup, JeuTheme } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
 // Background images for Christmas theme
@@ -21,12 +22,20 @@ const NOEL_BACKGROUNDS = [
   "/noel/noel_gray.png",
 ];
 
+// Background images for Birthday theme
+const BIRTHDAY_BACKGROUNDS = [
+  "/birthday/anniv1.png",
+  "/birthday/anniv2.png",
+  "/birthday/anniv3.png",
+  "/birthday/anniv4.png",
+];
+
 function getCenterIndex(size: number): number | null {
   if (size % 2 === 0) return null;
   return Math.floor((size * size) / 2);
 }
 
-const THEME_STYLES: Record<BingoTheme, { bg: string; border: string; title: string }> = {
+const THEME_STYLES: Record<JeuTheme, { bg: string; border: string; title: string }> = {
   standard: {
     bg: "bg-white",
     border: "border-gray-300",
@@ -44,40 +53,59 @@ const THEME_STYLES: Record<BingoTheme, { bg: string; border: string; title: stri
   },
 };
 
-export default function PrintAllGrillesPage() {
-  const { currentBingo, isLoading: bingoLoading } = useBingo();
-  const [grids, setGrids] = useState<GridWithGroup[]>([]);
-  const [images, setImages] = useState<Map<string, BingoImage>>(new Map());
+function PrintCartesContent() {
+  const searchParams = useSearchParams();
+  const { currentJeu, isLoading: bingoLoading } = useBingo();
+  const [cartes, setCartes] = useState<CarteWithGroup[]>([]);
+  const [images, setImages] = useState<Map<string, JeuImage>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const gridsPerPage = currentBingo?.grids_per_page || 1;
-  const theme = currentBingo?.theme || "standard";
+  const gridsPerPage = currentJeu?.grids_per_page || 1;
+  const theme = currentJeu?.theme || "standard";
   const themeStyle = THEME_STYLES[theme];
 
   const fetchData = useCallback(async () => {
-    if (!currentBingo) {
-      setGrids([]);
+    if (!currentJeu) {
+      setCartes([]);
       setImages(new Map());
       setIsLoading(false);
       return;
     }
 
     try {
-      const [gridsData, imagesData] = await Promise.all([
-        gridService.getAllForBingo(currentBingo.id),
-        imagesService.getAll(currentBingo.id),
-      ]);
+      // Get IDs from query parameter
+      const idsParam = searchParams.get("ids");
+      if (!idsParam) {
+        setCartes([]);
+        setImages(new Map());
+        setIsLoading(false);
+        return;
+      }
 
-      setGrids(gridsData);
+      const requestedIds = idsParam.split(",").filter(Boolean);
+
+      // Load images first
+      const imagesData = await imagesService.getAll(currentJeu.id);
+
+      // Load each carte with its group info
+      const cartesPromises = requestedIds.map(id =>
+        carteService.getByIdWithGroup(id)
+      );
+      const cartesData = await Promise.all(cartesPromises);
+
+      // Filter out nulls (cartes that don't exist)
+      const validCartes = cartesData.filter((c): c is CarteWithGroup => c !== null);
+
+      setCartes(validCartes);
       setImages(new Map(imagesData.map((img) => [img.id, img])));
-      setSelectedIds(new Set(gridsData.map((g) => g.id)));
+      setSelectedIds(new Set(validCartes.map((c) => c.id)));
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [currentBingo]);
+  }, [currentJeu, searchParams]);
 
   useEffect(() => {
     if (!bingoLoading) {
@@ -102,19 +130,19 @@ export default function PrintAllGrillesPage() {
   };
 
   const selectAll = () => {
-    setSelectedIds(new Set(grids.map((g) => g.id)));
+    setSelectedIds(new Set(cartes.map((c) => c.id)));
   };
 
   const selectNone = () => {
     setSelectedIds(new Set());
   };
 
-  const selectedGrids = grids.filter((g) => selectedIds.has(g.id));
+  const selectedCartes = cartes.filter((c) => selectedIds.has(c.id));
 
-  // Group selected grids into pages
-  const pages: GridWithGroup[][] = [];
-  for (let i = 0; i < selectedGrids.length; i += gridsPerPage) {
-    pages.push(selectedGrids.slice(i, i + gridsPerPage));
+  // Group selected cartes into pages
+  const pages: CarteWithGroup[][] = [];
+  for (let i = 0; i < selectedCartes.length; i += gridsPerPage) {
+    pages.push(selectedCartes.slice(i, i + gridsPerPage));
   }
 
   if (isLoading || bingoLoading) {
@@ -125,11 +153,26 @@ export default function PrintAllGrillesPage() {
     );
   }
 
-  if (!currentBingo) {
+  if (!currentJeu) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
         <span className="text-6xl mb-4 block">🎯</span>
-        <p className="text-xl text-muted-foreground">Aucun bingo sélectionné</p>
+        <p className="text-xl text-muted-foreground">Aucun jeu sélectionné</p>
+      </div>
+    );
+  }
+
+  if (cartes.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+        <span className="text-6xl mb-4 block">📄</span>
+        <p className="text-xl text-muted-foreground mb-4">Aucune carte à imprimer</p>
+        <Button variant="outline" asChild>
+          <Link href={`/jeu/${currentJeu.id}`}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour au hub
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -141,13 +184,13 @@ export default function PrintAllGrillesPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <Button variant="ghost" size="sm" className="mb-2" asChild>
-              <Link href="/grilles">
+              <Link href={`/jeu/${currentJeu.id}`}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Retour aux grilles
+                Retour au hub
               </Link>
             </Button>
             <h1 className="text-2xl md:text-3xl font-bold">
-              Imprimer les grilles
+              Imprimer les cartes
             </h1>
           </div>
           <Button
@@ -165,7 +208,7 @@ export default function PrintAllGrillesPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <p className="text-muted-foreground">
-                  {gridsPerPage} grille{gridsPerPage > 1 ? "s" : ""} par page
+                  {gridsPerPage} carte{gridsPerPage > 1 ? "s" : ""} par page
                 </p>
                 <Badge variant="secondary">{theme}</Badge>
               </div>
@@ -180,25 +223,25 @@ export default function PrintAllGrillesPage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {grids.map((grid) => (
+              {cartes.map((carte) => (
                 <div
-                  key={grid.id}
-                  onClick={() => toggleSelect(grid.id)}
+                  key={carte.id}
+                  onClick={() => toggleSelect(carte.id)}
                   className={cn(
                     "p-3 rounded-lg border-2 transition-all cursor-pointer",
-                    selectedIds.has(grid.id)
+                    selectedIds.has(carte.id)
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/50"
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <Checkbox checked={selectedIds.has(grid.id)} />
+                    <Checkbox checked={selectedIds.has(carte.id)} />
                     <span className="text-sm font-medium truncate">
-                      {grid.name}
+                      {carte.name}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {grid.grid_group.name}
+                    {carte.grid_group.name}
                   </p>
                 </div>
               ))}
@@ -211,19 +254,21 @@ export default function PrintAllGrillesPage() {
           <Card>
             <CardContent className="pt-6">
               <p className="text-muted-foreground text-sm mb-4 text-center">
-                Aperçu ({gridsPerPage} grille{gridsPerPage > 1 ? "s" : ""} par page)
+                Aperçu ({gridsPerPage} carte{gridsPerPage > 1 ? "s" : ""} par page)
               </p>
               <div className="bg-white rounded-xl p-4 space-y-4">
-                {pages.slice(0, 2).map((pageGrids, pageIndex) => {
+                {pages.slice(0, 2).map((pageCartes, pageIndex) => {
                   const isChristmas = theme === "christmas";
-                  
+                  const isBirthday = theme === "birthday";
+                  const hasBackgroundImage = isChristmas || isBirthday;
+
                   return (
                     <div
                       key={pageIndex}
                       className={cn(
                         "border rounded-lg overflow-hidden",
                         themeStyle.border,
-                        !isChristmas && themeStyle.bg
+                        !hasBackgroundImage && themeStyle.bg
                       )}
                     >
                       <p className="text-center text-xs text-gray-500 py-1 bg-white/80">
@@ -238,15 +283,19 @@ export default function PrintAllGrillesPage() {
                         )}
                         style={{ aspectRatio: gridsPerPage === 4 ? "210 / 297" : undefined }}
                       >
-                        {pageGrids.map((grid, gridIndex) => {
-                          const centerIndex = getCenterIndex(grid.grid_group.size);
-                          const bgImage = isChristmas 
-                            ? NOEL_BACKGROUNDS[gridIndex % NOEL_BACKGROUNDS.length]
+                        {pageCartes.map((carte, carteIndex) => {
+                          const centerIndex = getCenterIndex(carte.grid_group.size);
+                          // Use pageIndex when 1 grid per page to vary backgrounds across pages
+                          const backgroundIndex = gridsPerPage === 1 ? pageIndex : carteIndex;
+                          const bgImage = isChristmas
+                            ? NOEL_BACKGROUNDS[backgroundIndex % NOEL_BACKGROUNDS.length]
+                            : isBirthday
+                            ? BIRTHDAY_BACKGROUNDS[backgroundIndex % BIRTHDAY_BACKGROUNDS.length]
                             : null;
 
                           return (
-                            <div 
-                              key={grid.id}
+                            <div
+                              key={carte.id}
                               className="relative"
                               style={{
                                 ...(bgImage && {
@@ -259,32 +308,32 @@ export default function PrintAllGrillesPage() {
                                 })
                               }}
                             >
-                              {/* Title only for non-christmas */}
-                              {!isChristmas && (
+                              {/* Title only for non-background themes */}
+                              {!hasBackgroundImage && (
                                 <p className={cn(
                                   "text-center text-xs font-bold mb-1",
                                   themeStyle.title
                                 )}>
-                                  {grid.name}
+                                  {carte.name}
                                 </p>
                               )}
-                              
-                              {/* Grid positioned at bottom for christmas */}
+
+                              {/* Grid positioned at bottom for background themes */}
                               <div
                                 className={cn(
-                                  !isChristmas && "border border-gray-300",
-                                  isChristmas && "absolute bottom-1 left-1 right-1"
+                                  !hasBackgroundImage && "border border-gray-300",
+                                  hasBackgroundImage && "absolute bottom-1 left-1 right-1"
                                 )}
                                 style={{
                                   display: "grid",
-                                  gridTemplateColumns: `repeat(${grid.grid_group.size}, 1fr)`,
-                                  gridTemplateRows: `repeat(${grid.grid_group.size}, 1fr)`,
-                                  gap: isChristmas ? "2px" : "1px",
-                                  aspectRatio: isChristmas ? undefined : "1 / 1",
-                                  height: isChristmas ? "65%" : undefined,
+                                  gridTemplateColumns: `repeat(${carte.grid_group.size}, 1fr)`,
+                                  gridTemplateRows: `repeat(${carte.grid_group.size}, 1fr)`,
+                                  gap: hasBackgroundImage ? "2px" : "1px",
+                                  aspectRatio: hasBackgroundImage ? undefined : "1 / 1",
+                                  height: hasBackgroundImage ? "65%" : undefined,
                                 }}
                               >
-                                {grid.cells.map((imageId, index) => {
+                                {carte.cells.map((imageId, index) => {
                                   const isCenter = index === centerIndex;
                                   const isStar = imageId === "star";
                                   const image = !isStar ? images.get(imageId) : null;
@@ -293,7 +342,7 @@ export default function PrintAllGrillesPage() {
                                       key={index}
                                       className={cn(
                                         "flex items-center justify-center overflow-hidden",
-                                        isChristmas ? "bg-white/95 rounded" : "bg-white"
+                                        hasBackgroundImage ? "bg-white/95 rounded" : "bg-white"
                                       )}
                                     >
                                       {isCenter || isStar ? (
@@ -304,8 +353,12 @@ export default function PrintAllGrillesPage() {
                                           alt=""
                                           className={cn(
                                             "w-full h-full object-cover",
-                                            isChristmas && "rounded"
+                                            hasBackgroundImage && "rounded"
                                           )}
+                                          style={{
+                                            imageRendering: "crisp-edges",
+                                          }}
+                                          loading="eager"
                                         />
                                       ) : null}
                                     </div>
@@ -343,6 +396,14 @@ export default function PrintAllGrillesPage() {
               color: black !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
+            }
+            img {
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+              max-width: 100%;
+              height: auto;
             }
             .print-page {
               page-break-after: always;
@@ -383,21 +444,27 @@ export default function PrintAllGrillesPage() {
           }
         `}</style>
 
-        {pages.map((pageGrids, pageIndex) => {
+        {pages.map((pageCartes, pageIndex) => {
           const isChristmas = theme === "christmas";
+          const isBirthday = theme === "birthday";
+          const hasBackgroundImage = isChristmas || isBirthday;
 
           return (
             <div key={pageIndex} className="print-page">
               <div className={`grids-container-${gridsPerPage}`}>
-                {pageGrids.map((grid, gridIndex) => {
-                  const centerIndex = getCenterIndex(grid.grid_group.size);
-                  const bgImage = isChristmas 
-                    ? NOEL_BACKGROUNDS[gridIndex % NOEL_BACKGROUNDS.length]
+                {pageCartes.map((carte, carteIndex) => {
+                  const centerIndex = getCenterIndex(carte.grid_group.size);
+                  // Use pageIndex when 1 grid per page to vary backgrounds across pages
+                  const backgroundIndex = gridsPerPage === 1 ? pageIndex : carteIndex;
+                  const bgImage = isChristmas
+                    ? NOEL_BACKGROUNDS[backgroundIndex % NOEL_BACKGROUNDS.length]
+                    : isBirthday
+                    ? BIRTHDAY_BACKGROUNDS[backgroundIndex % BIRTHDAY_BACKGROUNDS.length]
                     : null;
 
                   return (
-                    <div 
-                      key={grid.id} 
+                    <div
+                      key={carte.id}
                       className="relative w-full h-full flex flex-col"
                       style={{
                         ...(bgImage && {
@@ -410,45 +477,45 @@ export default function PrintAllGrillesPage() {
                         })
                       }}
                     >
-                      {/* Grid title - only for non-christmas */}
-                      {!isChristmas && (
-                        <h2 
+                      {/* Grid title - only for non-background themes */}
+                      {!hasBackgroundImage && (
+                        <h2
                           className={cn(
                             "font-bold text-center pt-2",
                             themeStyle.title,
                             gridsPerPage === 1 ? "text-2xl mb-2" : "text-sm mb-1"
                           )}
                         >
-                          {grid.name}
+                          {carte.name}
                         </h2>
                       )}
-                      
-                      {/* Grid cells container - positioned at bottom for christmas */}
+
+                      {/* Grid cells container - positioned at bottom for background themes */}
                       <div
                         className={cn(
-                          isChristmas 
-                            ? "absolute inset-2 flex items-end justify-center" 
+                          hasBackgroundImage
+                            ? "absolute inset-2 flex items-end justify-center"
                             : "flex items-center justify-center px-1 pb-1 flex-1"
                         )}
                       >
                         <div
                           className={cn(
-                            !isChristmas && "border-2",
-                            !isChristmas && themeStyle.border,
-                            isChristmas && "h-full"
+                            !hasBackgroundImage && "border-2",
+                            !hasBackgroundImage && themeStyle.border,
+                            hasBackgroundImage && "h-full"
                           )}
                           style={{
                             display: "grid",
-                            gridTemplateColumns: `repeat(${grid.grid_group.size}, 1fr)`,
-                            gridTemplateRows: `repeat(${grid.grid_group.size}, 1fr)`,
+                            gridTemplateColumns: `repeat(${carte.grid_group.size}, 1fr)`,
+                            gridTemplateRows: `repeat(${carte.grid_group.size}, 1fr)`,
                             width: "100%",
-                            maxWidth: isChristmas ? "100%" : gridsPerPage === 1 ? "190mm" : "100%",
-                            aspectRatio: isChristmas ? undefined : "1 / 1",
-                            gap: isChristmas ? "4px" : "1px",
-                            maxHeight: isChristmas ? "68%" : !isChristmas ? "100%" : undefined,
+                            maxWidth: hasBackgroundImage ? "100%" : gridsPerPage === 1 ? "190mm" : "100%",
+                            aspectRatio: hasBackgroundImage ? undefined : "1 / 1",
+                            gap: hasBackgroundImage ? "4px" : "1px",
+                            maxHeight: hasBackgroundImage ? "68%" : !hasBackgroundImage ? "100%" : undefined,
                           }}
                         >
-                          {grid.cells.map((imageId, index) => {
+                          {carte.cells.map((imageId, index) => {
                             const isCenter = index === centerIndex;
                             const isStar = imageId === "star";
                             const image = !isStar ? images.get(imageId) : null;
@@ -457,8 +524,8 @@ export default function PrintAllGrillesPage() {
                                 key={index}
                                 className={cn(
                                   "flex items-center justify-center overflow-hidden",
-                                  isChristmas 
-                                    ? "bg-white/95 rounded-lg border border-white/30" 
+                                  hasBackgroundImage
+                                    ? "bg-white/95 rounded-lg border border-white/30"
                                     : "border border-gray-400 bg-white"
                                 )}
                               >
@@ -473,8 +540,12 @@ export default function PrintAllGrillesPage() {
                                     alt=""
                                     className={cn(
                                       "w-full h-full object-cover",
-                                      isChristmas && "rounded-lg"
+                                      hasBackgroundImage && "rounded-lg"
                                     )}
+                                    style={{
+                                      imageRendering: "crisp-edges",
+                                    }}
+                                    loading="eager"
                                   />
                                 ) : null}
                               </div>
@@ -491,5 +562,17 @@ export default function PrintAllGrillesPage() {
         })}
       </div>
     </>
+  );
+}
+
+export default function PrintCartesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    }>
+      <PrintCartesContent />
+    </Suspense>
   );
 }

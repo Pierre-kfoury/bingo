@@ -23,6 +23,14 @@ const NOEL_BACKGROUNDS = [
   "/noel/noel_gray.png",
 ];
 
+// Background images for Birthday theme
+const BIRTHDAY_BACKGROUNDS = [
+  "/birthday/anniv1.png",
+  "/birthday/anniv2.png",
+  "/birthday/anniv3.png",
+  "/birthday/anniv4.png",
+];
+
 type LivePreviewProps = {
   data: CreateBingoInput;
   images: BingoImage[];
@@ -227,17 +235,21 @@ export function LivePreview({ data, images, currentStep }: LivePreviewProps) {
                 {previewGrids.map((grid, gridIndex) => {
                   const bgImage = data.theme === "christmas" 
                     ? NOEL_BACKGROUNDS[gridIndex % NOEL_BACKGROUNDS.length]
+                    : data.theme === "birthday"
+                    ? BIRTHDAY_BACKGROUNDS[gridIndex % BIRTHDAY_BACKGROUNDS.length]
                     : null;
                   const isChristmas = data.theme === "christmas";
+                  const isBirthday = data.theme === "birthday";
+                  const hasBackgroundImage = isChristmas || isBirthday;
 
                   return (
                     <div
                       key={gridIndex}
                       className={cn(
                         "relative overflow-hidden w-full h-full flex flex-col",
-                        !isChristmas && currentTheme.preview.gridBg,
-                        !isChristmas && "border",
-                        !isChristmas && currentTheme.preview.border
+                        !hasBackgroundImage && currentTheme.preview.gridBg,
+                        !hasBackgroundImage && "border",
+                        !hasBackgroundImage && currentTheme.preview.border
                       )}
                       style={{ 
                         ...(bgImage && {
@@ -247,8 +259,8 @@ export function LivePreview({ data, images, currentStep }: LivePreviewProps) {
                         })
                       }}
                     >
-                      {/* Grid title - only for non-christmas */}
-                      {!isChristmas && (
+                      {/* Grid title - only for non-background themes */}
+                      {!hasBackgroundImage && (
                         <p
                           className={cn(
                             "text-center font-bold transition-colors pt-1",
@@ -262,10 +274,10 @@ export function LivePreview({ data, images, currentStep }: LivePreviewProps) {
                         </p>
                       )}
                       
-                      {/* Cells grid - positioned at bottom for christmas */}
+                      {/* Cells grid - positioned at bottom for background themes */}
                       <div
                         className={cn(
-                          isChristmas 
+                          hasBackgroundImage 
                             ? "absolute inset-2 flex items-end justify-center" 
                             : "w-full flex-1 flex items-center justify-center p-1"
                         )}
@@ -273,15 +285,15 @@ export function LivePreview({ data, images, currentStep }: LivePreviewProps) {
                         <div
                           className={cn(
                             "grid",
-                            isChristmas && "w-full"
+                            hasBackgroundImage && "w-full"
                           )}
                           style={{
                             gridTemplateColumns: `repeat(${data.grid_size}, 1fr)`,
                             gridTemplateRows: `repeat(${data.grid_size}, 1fr)`,
-                            gap: isChristmas ? "3px" : "1px",
-                            width: isChristmas ? "100%" : "100%",
+                            gap: hasBackgroundImage ? "3px" : "1px",
+                            width: hasBackgroundImage ? "100%" : "100%",
                             aspectRatio: "1 / 1",
-                            maxHeight: isChristmas ? "68%" : "100%",
+                            maxHeight: hasBackgroundImage ? "68%" : "100%",
                             maxWidth: "100%",
                           }}
                         >
@@ -292,7 +304,7 @@ export function LivePreview({ data, images, currentStep }: LivePreviewProps) {
                               key={cellIndex}
                               className={cn(
                                 "flex items-center justify-center overflow-hidden",
-                                isChristmas 
+                                hasBackgroundImage 
                                   ? "bg-white/95 rounded-lg border border-white/50" 
                                   : cn("border", currentTheme.preview.cellBorder, image ? "bg-white" : "bg-gray-100")
                               )}
@@ -305,17 +317,18 @@ export function LivePreview({ data, images, currentStep }: LivePreviewProps) {
                                 <Image
                                   src={image.url}
                                   alt=""
-                                  width={32}
-                                  height={32}
+                                  width={300}
+                                  height={300}
+                                  quality={95}
                                   className={cn(
                                     "w-full h-full object-cover",
-                                    isChristmas && "rounded-lg"
+                                    hasBackgroundImage && "rounded-lg"
                                   )}
                                 />
                               ) : (
                                 <div className={cn(
                                   "w-full h-full bg-gray-200/50",
-                                  isChristmas && "rounded-lg"
+                                  hasBackgroundImage && "rounded-lg"
                                 )} />
                               )}
                             </div>

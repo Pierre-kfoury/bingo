@@ -1,41 +1,41 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import type { Bingo } from "./types";
-import { bingoService } from "./bingo";
+import type { Jeu } from "./types";
+import { jeuService } from "./jeu";
 
-type BingoContextType = {
-  currentBingo: Bingo | null;
-  setCurrentBingo: (bingo: Bingo | null) => void;
-  bingos: Bingo[];
+type JeuContextType = {
+  currentJeu: Jeu | null;
+  setCurrentJeu: (jeu: Jeu | null) => void;
+  jeux: Jeu[];
   isLoading: boolean;
-  refreshBingos: () => Promise<Bingo[]>;
+  refreshJeux: () => Promise<Jeu[]>;
 };
 
-const BingoContext = createContext<BingoContextType | null>(null);
+const JeuContext = createContext<JeuContextType | null>(null);
 
-const STORAGE_KEY = "bingo_current_id";
+const STORAGE_KEY = "jeu_current_id";
 
-export function BingoProvider({ children }: { children: ReactNode }) {
-  const [currentBingo, setCurrentBingoState] = useState<Bingo | null>(null);
-  const [bingos, setBingos] = useState<Bingo[]>([]);
+export function JeuProvider({ children }: { children: ReactNode }) {
+  const [currentJeu, setCurrentJeuState] = useState<Jeu | null>(null);
+  const [jeux, setJeux] = useState<Jeu[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshBingos = useCallback(async () => {
+  const refreshJeux = useCallback(async () => {
     try {
-      const data = await bingoService.getAll();
-      setBingos(data);
+      const data = await jeuService.getAll();
+      setJeux(data);
       return data;
     } catch (error) {
-      console.error("Error fetching bingos:", error);
+      console.error("Error fetching jeux:", error);
       return [];
     }
   }, []);
 
-  const setCurrentBingo = useCallback((bingo: Bingo | null) => {
-    setCurrentBingoState(bingo);
-    if (bingo) {
-      localStorage.setItem(STORAGE_KEY, bingo.id);
+  const setCurrentJeu = useCallback((jeu: Jeu | null) => {
+    setCurrentJeuState(jeu);
+    if (jeu) {
+      localStorage.setItem(STORAGE_KEY, jeu.id);
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
@@ -44,47 +44,51 @@ export function BingoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
-      const data = await refreshBingos();
-      
-      // Restore last selected bingo from localStorage
+      const data = await refreshJeux();
+
+      // Restore last selected jeu from localStorage
       const savedId = localStorage.getItem(STORAGE_KEY);
       if (savedId && data.length > 0) {
-        const found = data.find((b) => b.id === savedId);
+        const found = data.find((j) => j.id === savedId);
         if (found) {
-          setCurrentBingoState(found);
+          setCurrentJeuState(found);
         } else if (data.length > 0) {
-          // Fallback to first bingo if saved one not found
-          setCurrentBingoState(data[0]);
+          // Fallback to first jeu if saved one not found
+          setCurrentJeuState(data[0]);
         }
       } else if (data.length > 0) {
-        setCurrentBingoState(data[0]);
+        setCurrentJeuState(data[0]);
       }
-      
+
       setIsLoading(false);
     };
 
     init();
-  }, [refreshBingos]);
+  }, [refreshJeux]);
 
   return (
-    <BingoContext.Provider
+    <JeuContext.Provider
       value={{
-        currentBingo,
-        setCurrentBingo,
-        bingos,
+        currentJeu,
+        setCurrentJeu,
+        jeux,
         isLoading,
-        refreshBingos,
+        refreshJeux,
       }}
     >
       {children}
-    </BingoContext.Provider>
+    </JeuContext.Provider>
   );
 }
 
-export function useBingo() {
-  const context = useContext(BingoContext);
+export function useJeu() {
+  const context = useContext(JeuContext);
   if (!context) {
-    throw new Error("useBingo must be used within a BingoProvider");
+    throw new Error("useJeu must be used within a JeuProvider");
   }
   return context;
 }
+
+// Legacy exports for gradual migration
+export const BingoProvider = JeuProvider;
+export const useBingo = useJeu;

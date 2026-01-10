@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { BingoProvider } from "@/lib/supabase/context";
+import { JeuProvider } from "@/lib/supabase/context";
 import { Navigation } from "@/components/Navigation";
 
 export const metadata: Metadata = {
@@ -16,12 +16,12 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className="antialiased">
-        <BingoProvider>
+        <JeuProvider>
           <Navigation />
           <main className="min-h-screen">
             {children}
           </main>
-        </BingoProvider>
+        </JeuProvider>
       </body>
     </html>
   );

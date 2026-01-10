@@ -29,7 +29,7 @@ const THEME_COLORS: Record<BingoTheme, string> = {
 
 export default function HomePage() {
   const router = useRouter();
-  const { setCurrentBingo, bingos, isLoading } = useBingo();
+  const { setCurrentJeu, jeux, isLoading } = useBingo();
 
   if (isLoading) {
     return (
@@ -49,7 +49,7 @@ export default function HomePage() {
             <span className="gradient-text">Photos</span>
           </h1>
           <p className="text-muted-foreground text-lg">
-            Créez des bingos personnalisés avec vos photos
+            Créez des jeux de bingo personnalisés avec vos photos
           </p>
         </div>
 
@@ -57,33 +57,33 @@ export default function HomePage() {
         <div className="flex justify-center mb-12">
           <Button
             size="lg"
-            onClick={() => router.push("/create")}
+            onClick={() => router.push("/creer")}
             className="h-14 px-8 text-lg font-bold rounded-2xl gradient-primary hover:opacity-90 transition-all transform hover:scale-105 shadow-xl shadow-primary/25"
           >
             <Plus className="w-5 h-5 mr-2" />
-            Créer un nouveau bingo
+            Créer un nouveau jeu
           </Button>
         </div>
 
-        {/* Recent Bingos */}
-        {bingos.length > 0 && (
+        {/* Recent Jeux */}
+        {jeux.length > 0 && (
           <div>
             <h2 className="text-xl font-semibold mb-4 text-center text-muted-foreground">
-              Ou continuez avec un bingo existant
+              Ou continuez avec un jeu existant
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {bingos.map((bingo) => {
-                const ThemeIcon = THEME_ICONS[bingo.theme] || Grid3X3;
-                const themeColors = THEME_COLORS[bingo.theme] || THEME_COLORS.standard;
+              {jeux.map((jeu) => {
+                const ThemeIcon = THEME_ICONS[jeu.theme] || Grid3X3;
+                const themeColors = THEME_COLORS[jeu.theme] || THEME_COLORS.standard;
 
                 return (
                   <Card
-                    key={bingo.id}
+                    key={jeu.id}
                     className="group cursor-pointer hover:border-primary/50 transition-all duration-300"
                     onClick={() => {
-                      setCurrentBingo(bingo);
-                      router.push(`/create?id=${bingo.id}`);
+                      setCurrentJeu(jeu);
+                      router.push(`/creer?id=${jeu.id}`);
                     }}
                   >
                     <CardContent className="p-5 relative">
@@ -96,10 +96,10 @@ export default function HomePage() {
 
                       {/* Content */}
                       <h3 className="font-semibold mb-1 pr-10 truncate group-hover:text-primary transition-colors">
-                        {bingo.name}
+                        {jeu.name}
                       </h3>
                       <p className="text-xs text-muted-foreground mb-2">
-                        {new Date(bingo.created_at).toLocaleDateString("fr-FR", {
+                        {new Date(jeu.created_at).toLocaleDateString("fr-FR", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
@@ -109,10 +109,10 @@ export default function HomePage() {
                       {/* Stats */}
                       <div className="flex gap-2">
                         <Badge variant="secondary" className="text-xs">
-                          {bingo.grid_size}×{bingo.grid_size}
+                          Cartes {jeu.grid_size}×{jeu.grid_size}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
-                          {bingo.player_count} joueurs
+                          {jeu.player_count} joueurs
                         </Badge>
                       </div>
 
